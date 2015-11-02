@@ -26,19 +26,19 @@ struct InstructionMemory{
        Instructions[8] =  "0111110000000101" ;
        Instructions[9] =  "1100110110000000" ;
        Instructions[10] = "0101000110100000" ;
-       Instructions[11] = "0010110110000000" ;
-       Instructions[12] = "0110100000000101" ;
+       Instructions[11] = "0010110110000001" ;
+       Instructions[12] = "0110000100000101" ;
        Instructions[13] = "0111111011111111" ;
        Instructions[14] = "0001111111000001" ;
-       Instructions[15] = "1101110111010101" ;
+       Instructions[15] = "1101111110010101" ;
        Instructions[16] = "1001000000000011" ;
        Instructions[17] = "1111001001000001" ;
-       Instructions[18] = "1011000011111111" ;
+       Instructions[18] = "1011011011111111" ;
        Instructions[19] = "1000000000001000" ;
        Instructions[20] = "0100000110010000" ;
        Instructions[21] = "1001010010000010" ;
-       Instructions[22] = "1111100100011011" ;
-       Instructions[23] = "1011000011111111" ;
+       Instructions[22] = "1111011100100011" ;
+       Instructions[23] = "1011011011111111" ;
        Instructions[24] = "0001101101000010" ;
        Instructions[25] = "0100000010010000" ;
        }
@@ -52,5 +52,28 @@ struct ProgramCounters{
        nextIndex = 0;
        }
        ProgramCounters(int nextIndexGiven): nextIndex(nextIndexGiven){}
+       };
+
+// parsedInstruction is a struct that contains all of the possible parsed pieces of an instruction.
+// It is up to the calling function to choose the correct pieces to use for the current instruction.
+// For example, a load word immediate instruction would use the eight bit immediate instead of six bit
+// immediate, whereas a subtract immediate instruction would use the six bit immediate.  
+struct parsedInstruction{
+       std::string opCode ;
+       std::string rs ;
+       std::string rt ;
+       std::string rd ;
+       std::string func ;
+       std::string sixBitImmediate ;
+       std::string eightBitImmediate ;
+       std::string address ;
+       //Empty Constructor:
+       parsedInstruction(){opCode = "0000"; rs = "000"; rt = "000"; rd = "000"; func = "000"; sixBitImmediate = "000000"; 
+       eightBitImmediate = "00000000"; address = "000000000000";}
+       //Overloaded Constructor: 
+       parsedInstruction(std::string opCodeGiven, std::string rsGiven, std::string rtGiven, std::string rdGiven, std::string funcGiven,
+       std::string sixBitImmediateGiven, std::string eightBitImmediateGiven, std::string addressGiven): opCode(opCodeGiven), rs(rsGiven),
+       rt(rtGiven), rd(rdGiven), func(funcGiven), sixBitImmediate(sixBitImmediateGiven), eightBitImmediate(eightBitImmediateGiven),
+       address(addressGiven) {}
        };
 #endif
