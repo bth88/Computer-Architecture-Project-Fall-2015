@@ -188,6 +188,7 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                                            cout << "XOR" << endl; 
                                            Control('R',0,6) ;
                                            }
+                    }
      return currParsedInstruction ;
 }
 
