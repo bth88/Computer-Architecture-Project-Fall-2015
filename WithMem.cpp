@@ -23,7 +23,9 @@ static int MemWrite = 0; // 0 Memory Writing Disabled, 1 Memory Writing is Enabl
 static int ALUSrc = 0; // 0 Chooses Read Data 2, 1 Chooses Sign Extended Address
 static int RegWrite = 0; // 0 Register Writing Disabled, 1 Register Writing Enabled
 static int Jump = 0; //0 Jumping Disabled, 1 Jumping Enabled
-
+string Mux(int controlSignal, string *inputArray){
+       return inputArray[controlSignal] ;
+       }
 //This is where the control signals are set.
 void Control(const char instructionType, int typeTwo, int ALUOpGiven){
      if(instructionType == 'R'){
@@ -188,43 +190,41 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                                            cout << "XOR" << endl; 
                                            Control('R',0,6) ;
                                            }
-                    }
      return currParsedInstruction ;
 }
+}
 
-string Mux(int controlSignal, string *inputArray){
-       return inputArray[controlSignal] ;
-       }
+
 
 /*
 memControl( rw = 0 for read/1 for write, offset = reg/mem address offset, type = reg/mem, input = int reference variable)
 return 1 for good, 0 for false
 */
-int memControl(int rw, int type, int offset, int* input, memController mem){
+int memControl(int rw, int type, int offset, int* input, memController* mc){
+	cout << *input << endl;
 	if(rw == 0){ //read
 		if(type == 0){ // Reg
-			*input = reg[offset];
+			*input = mc->reg[offset];
 			return 1;
 		}else if(type == 1){ // Mem
-			*input = mem[offset];
+			*input = mc->mem[offset];
 			return 1;
 		}else{
 			return 0;
 		}
 	}else if(rw == 1){ //write
 		if(type == 0){ // Reg
-			reg[offset] = *input;
+			mc->reg[offset] = *input;
+			cout << "Register Updated" << endl;
 			return 1;
 		}else if(type == 1){ // Mem
-			mem[offset] = *input;
+			mc->mem[offset] = *input;
 			return 1;
 		}else{
 			return 0;
 		}
 	}
 	return 0;
-
-
 }	
 
 int main(int argc, char **argv) {
@@ -234,7 +234,14 @@ int main(int argc, char **argv) {
             currInstruction = FetchInstruction() ;
             currParsedInstruction = decodeInstruction(currInstruction) ;
     }
+	
     struct memController memory;
+	int ip = 15;
+	if(memControl(1, 0, 0, &ip, &memory) == 1){
+		cout << "True" << endl;
+	}else{
+		cout << "False" << endl;
+	}
 	cout << memory.reg[0]<< endl;
     string input ;
     cin >> input ;
