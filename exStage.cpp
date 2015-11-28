@@ -91,7 +91,7 @@ void ExecuteInstruction()
 {
 	mux.src0 = IDEX.r2;
 	mux.src1 = IDEX.immd;
-	int exMuxResult = muxControl(0,0);//change argurments from hardcoded.
+	int exMuxResult = muxControl(0,1);//change argurments from hardcoded.
 
 	EXMEM.aluResult = aluOutput(IDEX.r1, exMuxResult, 0, "001");// change last two arguments from hardcoded
 	EXMEM.r2 = IDEX.r2;
