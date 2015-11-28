@@ -7,8 +7,10 @@ using namespace std;
 
 
 
-int aluOutput(int src1, int src2, int aluControl, int func, int status)
+int aluOutput(int src1, int src2, int aluControl, int func)
 {
+
+
 	if (func == "000")
 		return src1; // do nothing
 
