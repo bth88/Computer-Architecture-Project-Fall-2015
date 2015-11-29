@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string.h>
 
+using namespace std;
 typedef std::string Instruction ;
 const int instructionSize = 16 ;
 const int numInstructions = 26 ;
@@ -25,7 +26,7 @@ struct InstructionMemory{
        Instructions[7] =  "0111101000010000" ;
        Instructions[8] =  "0111110000000101" ;
        Instructions[9] =  "1100110110000000" ;
-       Instructions[10] = "0101000110100000" ;
+       Instructions[10] = "0101000000011010" ;
        Instructions[11] = "0010110110000001" ;
        Instructions[12] = "0110000100000101" ;
        Instructions[13] = "0111111011111111" ;
@@ -64,16 +65,79 @@ struct parsedInstruction{
        std::string rt ;
        std::string rd ;
        std::string func ;
-       std::string sixBitImmediate ;
-       std::string eightBitImmediate ;
-       std::string address ;
+       std::string ImmediateOffset ;
+       std::string JumpOffset ;
        //Empty Constructor:
-       parsedInstruction(){opCode = "0000"; rs = "000"; rt = "000"; rd = "000"; func = "000"; sixBitImmediate = "000000"; 
-       eightBitImmediate = "00000000"; address = "000000000000";}
+       parsedInstruction(){opCode = "0000"; rs = "000"; rt = "000"; rd = "000"; func = "000"; ImmediateOffset = "000000";
+       JumpOffset = "000000000000";}
        //Overloaded Constructor: 
        parsedInstruction(std::string opCodeGiven, std::string rsGiven, std::string rtGiven, std::string rdGiven, std::string funcGiven,
-       std::string sixBitImmediateGiven, std::string eightBitImmediateGiven, std::string addressGiven): opCode(opCodeGiven), rs(rsGiven),
-       rt(rtGiven), rd(rdGiven), func(funcGiven), sixBitImmediate(sixBitImmediateGiven), eightBitImmediate(eightBitImmediateGiven),
-       address(addressGiven) {}
+       std::string ImmediateOffsetGiven, std::string JumpOffsetGiven): opCode(opCodeGiven), rs(rsGiven),
+       rt(rtGiven), rd(rdGiven), func(funcGiven), ImmediateOffset(ImmediateOffsetGiven), JumpOffset(JumpOffsetGiven) {}
        };
+
+//Struct for memController
+struct memController{
+		int reg[8];
+		int mem[512];
+		memController(){
+			for( int i = 0; i < 9; i++){
+				reg[i] = 0x00;
+			}
+			for(int i = 0; i < 513; i++){
+				mem[i] = 0x00;
+			}
+		}
+};
+
+//Struct for Mux.
+struct mux {
+	int src0;
+	int src1;
+	int src2;
+	int src3;
+	//Empty Constructor
+	mux() {src0 = 0; src1 = 0; src2 = 0; src3 = 0;}
+    // Overloaded Constructor for int
+    mux(int mysrc0, int mysrc1, int mysrc2, int mysrc3) : src0(mysrc0), src1(mysrc1), src2(mysrc2), src3(mysrc3) {}
+
+}  mux;
+
+//Struct for IFID buffer
+struct IFIDBuf {
+       Instruction currInstruction ;
+       int currAddress ;
+       //Empty Constructor
+       IFIDBuf() {currInstruction = ""; currAddress = 0;}
+       };
+       
+//Struct for IDEX Buffer
+struct IDEXBuf {
+       int R1 ;
+       int R2 ;
+       int writeReg ;
+       int imm ; 
+       int jumpAddress ;
+       //Empty Constructor
+       IDEXBuf() {R1 = 0; R2 = 0; writeReg = 0; imm = 0; jumpAddress = 0;}
+       }; 
+
+//Struct for EXMEM Buffer
+struct EXMEMBuf{
+	int aluResult;
+	int R2;
+	int imm;
+	int writeReg;
+    //Empty Constructor
+    EXMEMBuf() {aluResult = 0; R2 = 0; imm = 0; writeReg = 0;}
+}  EXMEM;
+
+//Struct for MEMWB Buffer
+struct MEMWBBuf{
+	int imm;
+	int aluResult;
+	int memResult;
+	int writeReg;
+	MEMWBBuf() {imm = 0; aluResult = 0; memResult = 0; writeReg = 0;}
+} MEMWB;
 #endif
