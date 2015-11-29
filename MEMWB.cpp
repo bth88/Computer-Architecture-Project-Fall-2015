@@ -254,10 +254,10 @@ struct bufferEXMEM{
 }  EXMEM;
 
 //Jon's Code End
-
 struct bufferMEMWB{
 	int immd;
 	int aluResult;
+	int memResult;
 	int writeReg;	
 } MEMWB;
 
@@ -269,17 +269,18 @@ void memStage(){
 	if(MemWrite == 1){
 		if(MemSrc == 0){
 			src = memSrcMux.src0;
-			//write source 0
-			
 		}else{
 			src = memSrcMux.src0;
-			// write source 1
 		}
 		check = memControl(1, 1, address, &src);
+	}
+	if(MemRead == 1){
+		check = memControl(0,1, address, &src);
 	}
 	MEMWB.immd = EXMEM.immd;
 	MEMWB.aluResult = EXMEM.aluResult;
 	MEMWB.writeReg = EXMEM.writeReg;
+	MEMWB.memResult = src;
 }
 
 void wbStage(){
@@ -293,7 +294,7 @@ void wbStage(){
 	}else{
 		MemToRegMux.src0 = Immd.src1;
 	}
-	MemToRegMux.src1 = MEMWB.aluResult;
+	MemToRegMux.src1 = MEMWB.memResult;
 	if(MemtoReg == 0){
 		src = MemToRegMux.src0;
 	}else{
