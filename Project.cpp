@@ -28,19 +28,9 @@ static struct mux ALUSrcMux ;
 static struct mux memSrcMux ;
 static struct mux Immd ;
 static struct mux MemToRegMux ;
+static struct mux lteMux ;
+static struct mux ZeroMux ;
 
-//Control Signals:
-static int PCSrc = 0 ; // 0 Chooses PC + 4, 1 chooses the calculated address.
-static int RegDst = 0; //0 Chooses Rd, 1 Chooses Rt
-static int MemRead = 0; // 0 Memory Reading Disabled, 1 Memory Reading Enabled
-static int MemtoReg = 0; // 0 Memory to Register Disabled, 1 Memory to Register Enabled
-static int ALUOp = 0; // 0 ALU Control chooses from Instructions[5-0], 1 compares to 0
-static int MemWrite = 0; // 0 Memory Writing Disabled, 1 Memory Writing is Enabled
-static int ALUSrc = 0; // 0 Chooses Read Data 2, 1 Chooses Sign Extended Address
-static int RegWrite = 0; // 0 Register Writing Disabled, 1 Register Writing Enabled
-static int Jump = 0; //0 Jumping Disabled, 1 Jumping Enabled
-static int MemSrc = 0 ; // 0 Chooses either immediate or result of ALU for WB stage, 1 chooses result from Memory
-static int ImmSrc = 0 ; // 0 Chooses the ALU result, 1 chooses the immediate value.
 //The function for Mux Controller...
 int muxControl(struct mux currMux, int select2, int select1){
 
@@ -68,29 +58,29 @@ int btoi(string bin){
 	}
 	return num;
 }
-int aluOutput(int src1, int src2, int aluControl, string func)
+int aluOutput(int src1, int src2, int aluControl)
 {
 
 
-	if (func == "000")
+	if (aluControl == 0)
 		return src1; // do nothing
 
-	if (func == "001")
+	if (aluControl == 1)
 		return src1 + src2;// return sum
 
-	if (func == "010") //2
+	if (aluControl == 2) //2
 		return src1 - src2;// return differece
 
-	if (func == "011")
+	if (aluControl == 3)
 		return src1 >> src2; // return source 1 shift right by src2 bits
 
-	if (func == "100")
+	if (aluControl == 4)
 		return src1 << src2; // return S1 shift left by src2 bits
 
-	if (func == "101")
+	if (aluControl == 5)
 		return src1 | src2; // return bitwise OR
 
-	if (func == "110")
+	if (aluControl == 6)
 		return src2 ^ src1; // return bitwise XOR
 
 	else
@@ -99,46 +89,132 @@ int aluOutput(int src1, int src2, int aluControl, string func)
 }
 //This is where the control signals are set.
 void Control(const char instructionType, int typeTwo, int ALUOpGiven){
-     if(instructionType == 'R'){
-        cout << "R-type instruction" << endl ;
-        MemRead,MemtoReg,MemWrite,ALUSrc,Jump, PCSrc= 0;
-        RegWrite,RegDst = 1;
-        ALUOp = ALUOpGiven ;
-     }
-     //If the instruction is 'I' Type and does not access memory or branch.
-     else{if((instructionType == 'I') and (typeTwo == 0)){
-        cout << "I-type instruction No Mem Access No Jump" << endl ;
-        RegDst,MemRead,MemtoReg,MemWrite,ALUSrc,Jump = 0;
-        RegWrite = 1;
-        ALUOp = ALUOpGiven ;
-     }
-     //If the instruction is 'I' Type and does not access memory but does branch.
-     else{if((instructionType == 'I') and (typeTwo == 1)){
-        cout << "I-type instruction No Mem Access Yes Jump" << endl ;
-        RegDst,MemRead,MemtoReg,MemWrite,ALUSrc,Jump = 0;
-        PCSrc,RegWrite = 1;
-        ALUOp = ALUOpGiven ;
-     }
-     //If the instruction is 'I' Type and accesses Memory to read
-     else{if((instructionType == 'I') and (typeTwo == 2)){
-        cout << "I-type instruction Mem Access Read" << endl ;
-        RegDst,PCSrc,MemWrite,ALUSrc,Jump = 0;
-        RegWrite,MemRead,MemtoReg = 1;
-        ALUOp = ALUOpGiven ;
-     }
-     //If the instruction is 'I' Type and accesses Memory to write
-     else{if((instructionType == 'I') and (typeTwo == 3)){
-        cout << "I-type instruction Mem Access Write" << endl ;
-        RegDst,PCSrc,MemRead,MemtoReg,ALUSrc,RegWrite,Jump = 0;
-        MemWrite = 1;
-        ALUOp = ALUOpGiven ;
-     }
-     else{if(instructionType == 'J'){
+     //Control Signals:
+     struct ControlSignalsArray ControlSignals ;
+     //For J type instructions...
+     if(instructionType == 'J'){
         cout << "J-type instruction" << endl ;
-        RegDst,PCSrc,MemRead,MemtoReg,MemWrite,ALUSrc,RegWrite = 0;
-        Jump = 1;
-        ALUOp = ALUOpGiven ;
-     }}}}}}
+        ControlSignals.PCSrc = 1; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 1;
+        ControlSignals.ALUSrc = 0;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 0;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        //If it is a Jump Zero instruction...
+        if(ALUOpGiven == 2) { ControlSignals.JumpZero = 1 ;} 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For R type instructions
+     else{if(instructionType == 'R'){
+        cout << "R-type instruction" << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 1; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 0;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 1;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions with No memory access, no Jumps, and the ALU result stored.
+     else{if((instructionType == 'I') && (typeTwo == 0)){
+        cout << "I-type instruction No Mem Access No Jump Result Stored" << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 1;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 1;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions with No memory access, no Jumps, and the Immediate value stored.
+     else{if((instructionType == 'I') && (typeTwo == 1)){
+        cout << "I-type instruction No Mem Access No Jump Immediate Stored" << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 1;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 1;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 1;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions with Jump.
+     else{if((instructionType == 'I') && (typeTwo == 2)){
+        cout << "I-type instruction Jump" << endl ;
+        ControlSignals.PCSrc = 1; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 0;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 0;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions that read from memory
+     else{if((instructionType == 'I') && (typeTwo == 3)){
+        cout << "I-type instruction Mem Access Read" << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 1;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 1; 
+        ControlSignals.RegWrite = 1;
+        ControlSignals.MemRead = 1; 
+        ControlSignals.MemWrite = 0; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions that write Register Data
+     else{if((instructionType == 'I') && (typeTwo == 4)){
+        cout << "I-type instruction Mem Access Write Register Data " << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 1;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 0;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 1; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+     //For I type instructions that write Immediate Data
+     else{if((instructionType == 'I') && (typeTwo == 5)){
+        cout << "I-type instruction Mem Access Write Immediate Data " << endl ;
+        ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 1;
+        ControlSignals.MemSrc = 1;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 0;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 1; 
+        ControlSignals.ALUOp = ALUOpGiven ;
+     }
+}}}}}}}
+     IDEXBuffer.ControlSignals = ControlSignals ; 
 }
 
 // parseInstruction takes in an instruction and returns a parsedInstruction struct
@@ -150,6 +226,7 @@ parsedInstruction parseInstruction(Instruction currentInstruction) {
      string rd = "000" ;
      string func = "000" ;
      string ImmediateOffset = "000000" ;
+     string EightBitImmediate = "00000000" ;
      string JumpOffset = "000000000000" ;
      for(int k = 0; k < 4; k++){
              opCode[k] = currentInstruction[k] ;
@@ -163,11 +240,14 @@ parsedInstruction parseInstruction(Instruction currentInstruction) {
      for(int m = 0; m < 6; m++) {
              ImmediateOffset[m] = currentInstruction[m+4+3+3] ;
      }
-                      
-     for(int n = 0; n < 12; n++){
-             JumpOffset[n] = currentInstruction[n+4] ;
+     
+     for(int n = 0; n < 8; n++) {
+             EightBitImmediate[n] = currentInstruction[n+4+3+1] ;      
      }
-     parsedInstruction parsed(opCode, rs, rt, rd, func, ImmediateOffset, JumpOffset) ;
+     for(int o = 0; o < 12; o++){
+             JumpOffset[o] = currentInstruction[o+4] ;
+     }
+     parsedInstruction parsed(opCode, rs, rt, rd, func, ImmediateOffset, EightBitImmediate, JumpOffset) ;
      return parsed ;
              
 }
@@ -200,11 +280,11 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                          }
                     if(currParsedInstruction.opCode == "0110") {
                          cout << "Load Word" << endl ;
-                         Control('I',2,0) ;
+                         Control('I',3,1) ;
                          }
                     if(currParsedInstruction.opCode == "0111") {
                          cout << "Load Word Immediate" << endl ;
-                         Control('I', 0, 1) ;
+                         Control('I', 1, 0) ;
                          }
                     if(currParsedInstruction.opCode == "1000") {
                          cout << "Shift Left Immediate" << endl ;
@@ -216,11 +296,11 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                          }
                     if(currParsedInstruction.opCode == "1010") {
                          cout << "Store Word" << endl ;
-                         Control('I', 3, 0) ;
+                         Control('I', 4, 1) ;
                          }
                     if(currParsedInstruction.opCode == "1011") {
                          cout << "Store Word Immediate" << endl ;
-                         Control('I', 3, 1) ;
+                         Control('I', 5, 0) ;
                          }
                     if(currParsedInstruction.opCode == "1100") {
                          cout << "Subtraction Immediate" << endl ;
@@ -228,7 +308,7 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                          }
                     if(currParsedInstruction.opCode == "1101") {
                          cout << "Jump Less Than Or Equal" << endl;
-                         Control('I', 1, 2) ;
+                         Control('I', 2, 0) ;
                          }
                     if(currParsedInstruction.opCode == "1111"){
                                       if(currParsedInstruction.func == "000") {
@@ -258,7 +338,6 @@ memControl( rw = 0 for read/1 for write, offset = reg/mem address offset, type =
 return 1 for good, 0 for false
 */
 int memControl(int rw, int type, int offset, int* input, memController* mc){
-	cout << *input << endl;
 	if(rw == 0){ //read
 		if(type == 0){ // Reg
 			*input = mc->reg[offset];
@@ -272,7 +351,6 @@ int memControl(int rw, int type, int offset, int* input, memController* mc){
 	}else if(rw == 1){ //write
 		if(type == 0){ // Reg
 			mc->reg[offset] = *input;
-			cout << "Register Updated" << endl;
 			return 1;
 		}else if(type == 1){ // Mem
 			mc->mem[offset] = *input;
@@ -283,18 +361,17 @@ int memControl(int rw, int type, int offset, int* input, memController* mc){
 	}
 	return 0;
 }	
-int* RegisterFileOperations(int R1, int R2, int RWrite, int write){
+int* RegisterFileOperations(int R1, int R2, int RWrite, int WriteData, int write){
      int resultR1 = 0;
      int resultR2 = 0;
      if(write == 0) {
      memControl(0, 0, R1, &resultR1, &mc) ;
      memControl(0, 0, R2, &resultR2, &mc) ;
      }
-     if((write == 1) && (RegWrite == 1)) {
-     int* resultRWrite ;
-     memControl(1, 0, RWrite, resultRWrite, &mc) ;
+     if((write == 1)) {
+     memControl(1, 0, RWrite, &WriteData, &mc) ;
      }
-     int * results = new int[2]; 
+     int* results = new int[2]; 
      results[0] = resultR1 ;
      results[1] = resultR2 ;
      return results ;
@@ -304,7 +381,7 @@ int* RegisterFileOperations(int R1, int R2, int RWrite, int write){
 //The first stage, IF.  It updates the IF/ID buffer.
 void InstructionFetchStage(){
      //First, create the mux that chooses the next address.
-     PC.nextIndex = muxControl(PCSrcMux, PCSrc, 0) ;
+     PC.nextIndex = muxControl(PCSrcMux, IDEXBuffer.ControlSignals.PCSrc, 0) ;
      Instruction nextInstruction ;
      nextInstruction = IM.Instructions[PC.nextIndex] ;
      PCSrcMux.src0 = PC.nextIndex + 1 ;
@@ -320,20 +397,36 @@ void InstructionDecodeStage(){
      
      //Find the values for R1 and R2 from the Register File...
      int * resultsArray ;
-     resultsArray = RegisterFileOperations(btoi(currParsedInstruction.rs), btoi(currParsedInstruction.rt), 0, 0) ;
+     resultsArray = RegisterFileOperations(btoi(currParsedInstruction.rs), btoi(currParsedInstruction.rt), 0, 0, 0) ;
      
      //Select which register to write to...
      int WregResult ;
      RegDstMux.src0 = btoi(currParsedInstruction.rt) ;
      RegDstMux.src1 = btoi(currParsedInstruction.rd) ;
-     WregResult = muxControl(RegDstMux, RegDst, 0) ;
+     WregResult = muxControl(RegDstMux, IDEXBuffer.ControlSignals.RegDst, 0) ;
+     if(IDEXBuffer.ControlSignals.ImmSrc == 1) {WregResult = btoi(currParsedInstruction.rs);} 
      
      //Calculate the jump address...
      int jumpAddressResult = 0 ;
      int offset = 0 ;
      JumpMux.src0 = btoi(currParsedInstruction.ImmediateOffset) ;
      JumpMux.src1 = btoi(currParsedInstruction.JumpOffset) ;
-     offset = muxControl(JumpMux, Jump, 0) ;
+     offset = muxControl(JumpMux, IDEXBuffer.ControlSignals.Jump, 0) ;
+     //Less than or = branch.
+     if((IDEXBuffer.ControlSignals.Jump == 0) && (IDEXBuffer.ControlSignals.PCSrc == 1)) {
+        int value = resultsArray[0] - resultsArray[1] ;
+        int lte = 0;
+        if(value <= 0) { lte = 1;}
+        lteMux.src0 = 1 ;
+        lteMux.src1 = offset ;
+        offset = muxControl(lteMux, lte, 0);
+     }
+     //Jump Zero
+     if(IDEXBuffer.ControlSignals.JumpZero == 1) {
+        ZeroMux.src0 = 1 ;
+        ZeroMux.src1 = offset ;
+        offset = muxControl(ZeroMux, EXMEMBuffer.ControlSignals.ALUZero, 0) ;
+     }
      jumpAddressResult = offset + PC.nextIndex ;
      
      //Update the IDEX Buffer...
@@ -341,81 +434,93 @@ void InstructionDecodeStage(){
      IDEXBuffer.R2 = resultsArray[1] ;
      IDEXBuffer.writeReg = WregResult ; 
      IDEXBuffer.imm = btoi(currParsedInstruction.ImmediateOffset) ;
+     IDEXBuffer.EightBitImm = btoi(currParsedInstruction.EightBitImmediate) ;
      IDEXBuffer.jumpAddress = jumpAddressResult ;
-     cout << "R1: " << IDEXBuffer.R1 << endl ;
-     cout << "R2: " << IDEXBuffer.R2 << endl ;
-     cout << "Wreg: " << IDEXBuffer.writeReg << endl ;
-     cout << "imm: " << IDEXBuffer.imm << endl ;
-     cout << "jumpAddress: " << IDEXBuffer.jumpAddress << endl ;
      return ;
      }
-     
+
 void ExecutionStage()
 {
 	ALUSrcMux.src0 = IDEXBuffer.R2;
 	ALUSrcMux.src1 = IDEXBuffer.imm;
-	int exMuxResult = muxControl(ALUSrcMux,0,1);//change argurments from hardcoded.
-
-	EXMEMBuffer.aluResult = aluOutput(IDEXBuffer.R1, exMuxResult, 0, "001");// change last two arguments from hardcoded
+	int exMuxResult = muxControl(ALUSrcMux,0, IDEXBuffer.ControlSignals.ALUSrc);
+	EXMEMBuffer.aluResult = aluOutput(IDEXBuffer.R1, exMuxResult, IDEXBuffer.ControlSignals.ALUOp);
 	EXMEMBuffer.R2 = IDEXBuffer.R2;
 	EXMEMBuffer.imm = IDEXBuffer.imm;
+	EXMEMBuffer.EightBitImm = IDEXBuffer.EightBitImm;
 	EXMEMBuffer.writeReg = IDEXBuffer.writeReg;
+	EXMEMBuffer.ControlSignals = IDEXBuffer.ControlSignals ;
 }
 
 void MemoryStage()
 {
-    int check, src, address = EXMEM.aluResult;
-	memSrcMux.src0 = EXMEM.R2;
-	memSrcMux.src1 = EXMEM.imm;
-	if(MemWrite == 1){
-        src = muxControl(memSrcMux, MemSrc, 0) ;
-		check = memControl(1, 1, address, &src, &mc);
+    int check, src, address = EXMEMBuffer.aluResult;
+	memSrcMux.src0 = EXMEMBuffer.R2;
+	memSrcMux.src1 = EXMEMBuffer.imm;
+	if(EXMEMBuffer.ControlSignals.MemWrite == 1){
+        src = muxControl(memSrcMux, EXMEMBuffer.ControlSignals.MemSrc, 0) ;
+        int index = address / 16 ;
+        cout << "Address is: " << address << endl ;
+        cout << "index is: " << index << endl ;
+		check = memControl(1, 1, index, &src, &mc);
 	}
-	if(MemRead == 1){
+	if(EXMEMBuffer.ControlSignals.MemRead == 1){
 		check = memControl(0,1, address, &src, &mc);
 	}
-	MEMWB.imm = EXMEM.imm;
-	MEMWB.aluResult = EXMEM.aluResult;
-	MEMWB.writeReg = EXMEM.writeReg;
-	MEMWB.memResult = src;
+	MEMWBBuffer.imm = EXMEMBuffer.imm;
+	MEMWBBuffer.EightBitImm = EXMEMBuffer.EightBitImm;
+	MEMWBBuffer.aluResult = EXMEMBuffer.aluResult;
+	MEMWBBuffer.writeReg = EXMEMBuffer.writeReg;
+	MEMWBBuffer.memResult = src;
+	MEMWBBuffer.ControlSignals = EXMEMBuffer.ControlSignals ;
 }
 
 void WriteBackStage()
 {
     int check, src, address = MEMWBBuffer.writeReg;
 	Immd.src0 = MEMWBBuffer.aluResult;
-	Immd.src1 = MEMWBBuffer.imm;
-	if(ImmSrc == 0){
+	Immd.src1 = MEMWBBuffer.EightBitImm;
+	if(MEMWBBuffer.ControlSignals.ImmSrc == 0){
 		MemToRegMux.src0 = Immd.src0;
 	}else{
 		MemToRegMux.src0 = Immd.src1;
 	}
 	MemToRegMux.src1 = MEMWBBuffer.memResult;
-	if(MemtoReg == 0){
+	if(MEMWBBuffer.ControlSignals.MemtoReg == 0){
 		src = MemToRegMux.src0;
 	}else{
 		src = MemToRegMux.src1;
 	}
-	check = memControl(1, 0, address, &src, &mc);
+
+	RegisterFileOperations(0,0,MEMWBBuffer.writeReg, src, 1) ; 
+}
+//Initialize Memory
+void initMem() {
+     mc.mem[1] = 257 ;
+     mc.mem[2] = 272 ;
+     mc.mem[3] = 17 ;
+     mc.mem[4] = 240 ;
+     mc.mem[5] = 255 ;
 }
 
-
 int main(int argc, char **argv) {
-    for(int i = 0; i < numInstructions; i++){
-            parsedInstruction currParsedInstruction;
+    initMem() ;
+    for(int i = 0; i < numInstructions + 15; i++){
+            cout << "INSTRUCTION #: " << i << endl; 
             InstructionFetchStage() ;
             InstructionDecodeStage() ;
-            
+            ExecutionStage() ;
+            MemoryStage() ;
+            WriteBackStage() ;
     }
-	
-	int ip = 15;
-	if(memControl(1, 0, 0, &ip, &mc) == 1){
-		cout << "True" << endl;
-	}else{
-		cout << "False" << endl;
-	}
-	cout << mc.reg[0]<< endl;
+	for(int i = 0; i < 8; i++) {
+            cout << mc.reg[i] << endl ;
+            }
+    for(int j = 0; j < 6; j++) {
+            cout << "MemIndex: " << j << " Mem Value: " << mc.mem[j] << endl;
+            }
     string input ;
     cin >> input ;
     return 0;
 }
+
