@@ -36,7 +36,7 @@ struct InstructionMemory{
        Instructions[17] = "1111001001000001" ;
        Instructions[18] = "1011011011111111" ;
        Instructions[19] = "1000000000001000" ;
-       Instructions[20] = "0100000110010000" ;
+       Instructions[20] = "0100000000011001" ;
        Instructions[21] = "1001010010000010" ;
        Instructions[22] = "1111011100100011" ;
        Instructions[23] = "1011011011111111" ;
@@ -66,14 +66,15 @@ struct parsedInstruction{
        std::string rd ;
        std::string func ;
        std::string ImmediateOffset ;
+       std::string EightBitImmediate ;
        std::string JumpOffset ;
        //Empty Constructor:
        parsedInstruction(){opCode = "0000"; rs = "000"; rt = "000"; rd = "000"; func = "000"; ImmediateOffset = "000000";
-       JumpOffset = "000000000000";}
+       EightBitImmediate = "00000000"; JumpOffset = "000000000000";}
        //Overloaded Constructor: 
        parsedInstruction(std::string opCodeGiven, std::string rsGiven, std::string rtGiven, std::string rdGiven, std::string funcGiven,
-       std::string ImmediateOffsetGiven, std::string JumpOffsetGiven): opCode(opCodeGiven), rs(rsGiven),
-       rt(rtGiven), rd(rdGiven), func(funcGiven), ImmediateOffset(ImmediateOffsetGiven), JumpOffset(JumpOffsetGiven) {}
+       std::string ImmediateOffsetGiven, std::string EightBitImmediateGiven, std::string JumpOffsetGiven): opCode(opCodeGiven), rs(rsGiven),
+       rt(rtGiven), rd(rdGiven), func(funcGiven), ImmediateOffset(ImmediateOffsetGiven), EightBitImmediate(EightBitImmediateGiven), JumpOffset(JumpOffsetGiven) {}
        };
 
 //Struct for memController
@@ -103,6 +104,37 @@ struct mux {
 
 }  mux;
 
+//Struct for control signals.  This is so they can easily be passed between stages.
+struct ControlSignalsArray {
+     int PCSrc; // 0 Chooses PC + 4, 1 chooses the calculated address.
+     int RegDst; //0 Chooses Rd, 1 Chooses Rt
+     int MemRead; // 0 Memory Reading Disabled, 1 Memory Reading Enabled
+     int MemtoReg; // 0 Memory to Register Disabled, 1 Memory to Register Enabled
+     int ALUOp; // 0 ALU Control chooses from Instructions[5-0], 1 compares to 0
+     int MemWrite; // 0 Memory Writing Disabled, 1 Memory Writing is Enabled
+     int ALUSrc; // 0 Chooses Read Data 2, 1 Chooses Sign Extended Address
+     int RegWrite; // 0 Register Writing Disabled, 1 Register Writing Enabled
+     int Jump; //0 Jumping Disabled, 1 Jumping Enabled
+     int MemSrc; // 0 Chooses either immediate or result of ALU for WB stage, 1 chooses result from Memory
+     int ImmSrc; // 0 Chooses the ALU result, 1 chooses the immediate value.
+     int ALUZero; // 0 if the result from the ALU is nonzero, 1 if the result is 0.
+     int JumpZero ; //If 0, the instruction is not a jump zero instruction.  If 1 it is.  
+     ControlSignalsArray(){
+              PCSrc = 0 ;
+              RegDst = 0;
+              MemRead = 0;
+              MemtoReg = 0;
+              ALUOp = 0;
+              MemWrite = 0; 
+              ALUSrc = 0; 
+              RegWrite = 0; 
+              Jump = 0; 
+              MemSrc = 0 ; 
+              ImmSrc = 0 ; 
+              ALUZero = 0 ;
+              JumpZero = 0 ;
+     }
+     };
 //Struct for IFID buffer
 struct IFIDBuf {
        Instruction currInstruction ;
@@ -117,9 +149,11 @@ struct IDEXBuf {
        int R2 ;
        int writeReg ;
        int imm ; 
+       int EightBitImm ;
        int jumpAddress ;
+       struct ControlSignalsArray ControlSignals;
        //Empty Constructor
-       IDEXBuf() {R1 = 0; R2 = 0; writeReg = 0; imm = 0; jumpAddress = 0;}
+       IDEXBuf() {R1 = 0; R2 = 0; writeReg = 0; imm = 0; EightBitImm = 0; jumpAddress = 0;}
        }; 
 
 //Struct for EXMEM Buffer
@@ -127,17 +161,22 @@ struct EXMEMBuf{
 	int aluResult;
 	int R2;
 	int imm;
+	int EightBitImm;
 	int writeReg;
+	struct ControlSignalsArray ControlSignals;
     //Empty Constructor
-    EXMEMBuf() {aluResult = 0; R2 = 0; imm = 0; writeReg = 0;}
-}  EXMEM;
+    EXMEMBuf() {aluResult = 0; R2 = 0; imm = 0; EightBitImm = 0; writeReg = 0;}
+};
 
 //Struct for MEMWB Buffer
 struct MEMWBBuf{
 	int imm;
+	int EightBitImm;
 	int aluResult;
 	int memResult;
 	int writeReg;
-	MEMWBBuf() {imm = 0; aluResult = 0; memResult = 0; writeReg = 0;}
-} MEMWB;
+	struct ControlSignalsArray ControlSignals ;
+	MEMWBBuf() {imm = 0; EightBitImm = 0; aluResult = 0; memResult = 0; writeReg = 0;}
+};
 #endif
+
