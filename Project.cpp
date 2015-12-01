@@ -7,7 +7,9 @@
 using namespace std;
 
 //Global Variables:
-         
+
+int end; // When this is 1, stop the program.
+
 //IM is the instruction memory, where the instructions are stored.
 // PC is the program counter, where the next instruction is stored.
 const static InstructionMemory IM ;
@@ -68,7 +70,7 @@ int aluOutput(int src1, int src2, int aluControl)
 	if (aluControl == 1)
 		return src1 + src2;// return sum
 
-	if (aluControl == 2) //2
+	if (aluControl == 2) 
 		return src1 - src2;// return differece
 
 	if (aluControl == 3)
@@ -91,6 +93,21 @@ int aluOutput(int src1, int src2, int aluControl)
 void Control(const char instructionType, int typeTwo, int ALUOpGiven){
      //Control Signals:
      struct ControlSignalsArray ControlSignals ;
+     
+     //For No Operations...
+     if(instructionType == 'N'){
+       cout << "Nop" << endl ;
+       ControlSignals.PCSrc = 0; 
+        ControlSignals.RegDst = 0; 
+        ControlSignals.Jump = 0;
+        ControlSignals.ALUSrc = 0;
+        ControlSignals.MemSrc = 0;
+        ControlSignals.ImmSrc = 0;
+        ControlSignals.MemtoReg = 0; 
+        ControlSignals.RegWrite = 0;
+        ControlSignals.MemRead = 0; 
+        ControlSignals.MemWrite = 0; 
+        }
      //For J type instructions...
      if(instructionType == 'J'){
         cout << "J-type instruction" << endl ;
@@ -310,6 +327,10 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                          cout << "Jump Less Than Or Equal" << endl;
                          Control('I', 2, 0) ;
                          }
+                    if(currParsedInstruction.opCode == "1110") {
+                         cout << "No Operation" << endl ;
+                         Control('N', 0, 0) ;
+                         }
                     if(currParsedInstruction.opCode == "1111"){
                                       if(currParsedInstruction.func == "000") {
                                            cout << "Add" << endl;
@@ -368,7 +389,9 @@ int* RegisterFileOperations(int R1, int R2, int RWrite, int WriteData, int write
      memControl(0, 0, R1, &resultR1, &mc) ;
      memControl(0, 0, R2, &resultR2, &mc) ;
      }
-     if((write == 1)) {
+     if((write == 1) && (MEMWBBuffer.ControlSignals.RegWrite == 1)) {
+     cout << "Write Reg: " << RWrite << endl ;
+     cout << "WriteData: " << WriteData << endl ;
      memControl(1, 0, RWrite, &WriteData, &mc) ;
      }
      int* results = new int[2]; 
@@ -381,10 +404,17 @@ int* RegisterFileOperations(int R1, int R2, int RWrite, int WriteData, int write
 //The first stage, IF.  It updates the IF/ID buffer.
 void InstructionFetchStage(){
      //First, create the mux that chooses the next address.
-     PC.nextIndex = muxControl(PCSrcMux, IDEXBuffer.ControlSignals.PCSrc, 0) ;
+     PC.nextIndex = muxControl(PCSrcMux, 0, IDEXBuffer.ControlSignals.PCSrc) ;
      Instruction nextInstruction ;
+     if(PC.nextIndex >= numInstructions) {
+                     cout << "NO MORE INSTRUCTIONS" << endl ;
+                     end = 1 ;
+                     nextInstruction = "1110000000000000" ; //NOP instruction.
+     }
+     else{
      nextInstruction = IM.Instructions[PC.nextIndex] ;
-     PCSrcMux.src0 = PC.nextIndex + 1 ;
+     }
+     PCSrcMux.src0 = PC.nextIndex + 1;
      IFIDBuffer.currInstruction = nextInstruction ;
      IFIDBuffer.currAddress = PC.nextIndex ;
      return ;
@@ -411,23 +441,27 @@ void InstructionDecodeStage(){
      int offset = 0 ;
      JumpMux.src0 = btoi(currParsedInstruction.ImmediateOffset) ;
      JumpMux.src1 = btoi(currParsedInstruction.JumpOffset) ;
-     offset = muxControl(JumpMux, IDEXBuffer.ControlSignals.Jump, 0) ;
+     offset = muxControl(JumpMux, 0, IDEXBuffer.ControlSignals.Jump) ;
      //Less than or = branch.
      if((IDEXBuffer.ControlSignals.Jump == 0) && (IDEXBuffer.ControlSignals.PCSrc == 1)) {
-        int value = resultsArray[0] - resultsArray[1] ;
+        int value = resultsArray[1] - resultsArray[0] ;
         int lte = 0;
         if(value <= 0) { lte = 1;}
-        lteMux.src0 = 1 ;
+        lteMux.src0 = PC.nextIndex + 1 ;
         lteMux.src1 = offset ;
-        offset = muxControl(lteMux, lte, 0);
+        offset = muxControl(lteMux, 0, lte);
      }
      //Jump Zero
      if(IDEXBuffer.ControlSignals.JumpZero == 1) {
-        ZeroMux.src0 = 1 ;
+        ZeroMux.src0 = PC.nextIndex + 1;
         ZeroMux.src1 = offset ;
+        cout << "Jumping Zero..." << endl ;
         offset = muxControl(ZeroMux, EXMEMBuffer.ControlSignals.ALUZero, 0) ;
+        cout << "Chosen offset is: " << offset << endl ;
      }
-     jumpAddressResult = offset + PC.nextIndex ;
+     jumpAddressResult = offset;
+     PCSrcMux.src1 = jumpAddressResult;
+     cout << "Jump Address is: " << jumpAddressResult << endl ;
      
      //Update the IDEX Buffer...
      IDEXBuffer.R1 = resultsArray[0] ;
@@ -445,6 +479,8 @@ void ExecutionStage()
 	ALUSrcMux.src1 = IDEXBuffer.imm;
 	int exMuxResult = muxControl(ALUSrcMux,0, IDEXBuffer.ControlSignals.ALUSrc);
 	EXMEMBuffer.aluResult = aluOutput(IDEXBuffer.R1, exMuxResult, IDEXBuffer.ControlSignals.ALUOp);
+	if(EXMEMBuffer.aluResult == 0) { EXMEMBuffer.ALUZero = 1; }
+	else{ EXMEMBuffer.ALUZero = 0;}
 	EXMEMBuffer.R2 = IDEXBuffer.R2;
 	EXMEMBuffer.imm = IDEXBuffer.imm;
 	EXMEMBuffer.EightBitImm = IDEXBuffer.EightBitImm;
@@ -456,16 +492,18 @@ void MemoryStage()
 {
     int check, src, address = EXMEMBuffer.aluResult;
 	memSrcMux.src0 = EXMEMBuffer.R2;
-	memSrcMux.src1 = EXMEMBuffer.imm;
+	memSrcMux.src1 = EXMEMBuffer.EightBitImm;
 	if(EXMEMBuffer.ControlSignals.MemWrite == 1){
-        src = muxControl(memSrcMux, EXMEMBuffer.ControlSignals.MemSrc, 0) ;
+        src = muxControl(memSrcMux, 0, EXMEMBuffer.ControlSignals.MemSrc) ;
         int index = address / 16 ;
         cout << "Address is: " << address << endl ;
         cout << "index is: " << index << endl ;
+        cout << "src is: " << src << endl ;
 		check = memControl(1, 1, index, &src, &mc);
 	}
 	if(EXMEMBuffer.ControlSignals.MemRead == 1){
 		check = memControl(0,1, address, &src, &mc);
+		cout << "Read src is: " << src << endl ;
 	}
 	MEMWBBuffer.imm = EXMEMBuffer.imm;
 	MEMWBBuffer.EightBitImm = EXMEMBuffer.EightBitImm;
@@ -505,14 +543,18 @@ void initMem() {
 
 int main(int argc, char **argv) {
     initMem() ;
-    for(int i = 0; i < numInstructions + 15; i++){
-            cout << "INSTRUCTION #: " << i << endl; 
+    end = 0;
+    int testcounter = 0;
+    while(!end){
+            if(testcounter >= 50) { break;}
+            cout << "INSTRUCTION #: " << testcounter << endl; 
             InstructionFetchStage() ;
             InstructionDecodeStage() ;
             ExecutionStage() ;
             MemoryStage() ;
             WriteBackStage() ;
-    }
+            testcounter++ ;
+    
 	for(int i = 0; i < 8; i++) {
             cout << mc.reg[i] << endl ;
             }
@@ -521,6 +563,8 @@ int main(int argc, char **argv) {
             }
     string input ;
     cin >> input ;
+}
     return 0;
 }
+
 
