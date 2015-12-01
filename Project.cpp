@@ -122,7 +122,7 @@ void Control(const char instructionType, int typeTwo, int ALUOpGiven){
         ControlSignals.MemRead = 0; 
         ControlSignals.MemWrite = 0; 
         //If it is a Jump Zero instruction...
-        if(ALUOpGiven == 2) { ControlSignals.JumpZero = 1 ;} 
+        if(ALUOpGiven == 2) { ControlSignals.JumpZero = 1 ; ControlSignals.Jump = 0;} 
         ControlSignals.ALUOp = ALUOpGiven ;
      }
      //For R type instructions
@@ -313,7 +313,7 @@ parsedInstruction decodeInstruction(Instruction currentInstruction){
                          }
                     if(currParsedInstruction.opCode == "1010") {
                          cout << "Store Word" << endl ;
-                         Control('I', 4, 1) ;
+                         Control('I', 4, 0) ;
                          }
                     if(currParsedInstruction.opCode == "1011") {
                          cout << "Store Word Immediate" << endl ;
@@ -365,6 +365,7 @@ int memControl(int rw, int type, int offset, int* input, memController* mc){
 			return 1;
 		}else if(type == 1){ // Mem
 			*input = mc->mem[offset];
+			cout << "mem[offset-1]: " << mc->mem[offset];
 			return 1;
 		}else{
 			return 0;
@@ -406,15 +407,18 @@ void InstructionFetchStage(){
      //First, create the mux that chooses the next address.
      PC.nextIndex = muxControl(PCSrcMux, 0, IDEXBuffer.ControlSignals.PCSrc) ;
      Instruction nextInstruction ;
-     if(PC.nextIndex >= numInstructions) {
-                     cout << "NO MORE INSTRUCTIONS" << endl ;
-                     end = 1 ;
-                     nextInstruction = "1110000000000000" ; //NOP instruction.
+
+     nextInstruction = IM.Instructions[PC.nextIndex] ;
+     if(nextInstruction == "1111111111111111")
+     {
+         cout << "End of Program!" << endl ;
+         end = 1 ;
+         nextInstruction = "1110000000000000" ;
+         PCSrcMux.src0 = PC.nextIndex ;
      }
      else{
-     nextInstruction = IM.Instructions[PC.nextIndex] ;
-     }
      PCSrcMux.src0 = PC.nextIndex + 1;
+     }
      IFIDBuffer.currInstruction = nextInstruction ;
      IFIDBuffer.currAddress = PC.nextIndex ;
      return ;
@@ -454,14 +458,12 @@ void InstructionDecodeStage(){
      //Jump Zero
      if(IDEXBuffer.ControlSignals.JumpZero == 1) {
         ZeroMux.src0 = PC.nextIndex + 1;
-        ZeroMux.src1 = offset ;
-        cout << "Jumping Zero..." << endl ;
-        offset = muxControl(ZeroMux, EXMEMBuffer.ControlSignals.ALUZero, 0) ;
-        cout << "Chosen offset is: " << offset << endl ;
+        ZeroMux.src1 = btoi(currParsedInstruction.ImmediateOffset) ;
+        if(IDEXBuffer.R1 == 0){EXMEMBuffer.ControlSignals.ALUZero = 1 ;}
+        offset = muxControl(ZeroMux, 0, EXMEMBuffer.ControlSignals.ALUZero) ;
      }
      jumpAddressResult = offset;
      PCSrcMux.src1 = jumpAddressResult;
-     cout << "Jump Address is: " << jumpAddressResult << endl ;
      
      //Update the IDEX Buffer...
      IDEXBuffer.R1 = resultsArray[0] ;
@@ -490,20 +492,17 @@ void ExecutionStage()
 
 void MemoryStage()
 {
-    int check, src, address = EXMEMBuffer.aluResult;
+    int check, src, address = EXMEMBuffer.EightBitImm;
 	memSrcMux.src0 = EXMEMBuffer.R2;
 	memSrcMux.src1 = EXMEMBuffer.EightBitImm;
 	if(EXMEMBuffer.ControlSignals.MemWrite == 1){
         src = muxControl(memSrcMux, 0, EXMEMBuffer.ControlSignals.MemSrc) ;
         int index = address / 16 ;
-        cout << "Address is: " << address << endl ;
-        cout << "index is: " << index << endl ;
-        cout << "src is: " << src << endl ;
 		check = memControl(1, 1, index, &src, &mc);
 	}
 	if(EXMEMBuffer.ControlSignals.MemRead == 1){
+        //int readIndex = address / 16 ;
 		check = memControl(0,1, address, &src, &mc);
-		cout << "Read src is: " << src << endl ;
 	}
 	MEMWBBuffer.imm = EXMEMBuffer.imm;
 	MEMWBBuffer.EightBitImm = EXMEMBuffer.EightBitImm;
@@ -545,8 +544,8 @@ int main(int argc, char **argv) {
     initMem() ;
     end = 0;
     int testcounter = 0;
-    while(!end){
-            if(testcounter >= 50) { break;}
+    while(end == 0){
+            if(testcounter >= 1000) { break;}
             cout << "INSTRUCTION #: " << testcounter << endl; 
             InstructionFetchStage() ;
             InstructionDecodeStage() ;
@@ -558,12 +557,12 @@ int main(int argc, char **argv) {
 	for(int i = 0; i < 8; i++) {
             cout << mc.reg[i] << endl ;
             }
-    for(int j = 0; j < 6; j++) {
+    for(int j = 0; j < 17; j++) {
             cout << "MemIndex: " << j << " Mem Value: " << mc.mem[j] << endl;
             }
+}
     string input ;
     cin >> input ;
-}
     return 0;
 }
 
