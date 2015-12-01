@@ -8,7 +8,7 @@
 using namespace std;
 typedef std::string Instruction ;
 const int instructionSize = 16 ;
-const int numInstructions = 26 ;
+const int numInstructions = 30 ;
 
 //This struct has all of the 26 instructions stored in an array named Instructions.
 // Each index of the Instructions array contains a 16 bit instruction, that is stored
@@ -16,7 +16,7 @@ const int numInstructions = 26 ;
 struct InstructionMemory{
        Instruction Instructions[numInstructions] ;
        InstructionMemory() {
-       Instructions[0] =  "0111000001000000" ;
+       Instructions[0] =  "0111000001000000" ; 
        Instructions[1] =  "0111001000010000" ;
        Instructions[2] =  "1000001001001000" ;
        Instructions[3] =  "0001001001010000" ;
@@ -26,22 +26,26 @@ struct InstructionMemory{
        Instructions[7] =  "0111101000010000" ;
        Instructions[8] =  "0111110000000101" ;
        Instructions[9] =  "1100110110000000" ;
-       Instructions[10] = "0101000000011010" ;
-       Instructions[11] = "0010110110000001" ;
-       Instructions[12] = "0110000100000101" ;
-       Instructions[13] = "0111111011111111" ;
-       Instructions[14] = "0001111111000001" ;
-       Instructions[15] = "1101111110010101" ;
-       Instructions[16] = "1001000000000011" ;
-       Instructions[17] = "1111001001000001" ;
-       Instructions[18] = "1011011011111111" ;
-       Instructions[19] = "1000000000001000" ;
-       Instructions[20] = "0100000000011001" ;
-       Instructions[21] = "1001010010000010" ;
-       Instructions[22] = "1111011100100011" ;
-       Instructions[23] = "1011011011111111" ;
-       Instructions[24] = "0001101101000010" ;
-       Instructions[25] = "0100000010010000" ;
+       Instructions[10] = "0101000000011101" ;
+       Instructions[11] = "1110000000000000" ; // NOP inserted for jump zero...
+       Instructions[12] = "0010110110000001" ;
+       Instructions[13] = "0110000100000101" ;
+       Instructions[14] = "0111111011111111" ;
+       Instructions[15] = "0001111111000001" ;
+       Instructions[16] = "1101111100011000" ; 
+       Instructions[17] = "1110000000000000" ;// NOP inserted for jump here...
+       Instructions[18] = "1001000000000011" ;
+       Instructions[19] = "1111001001000001" ;
+       Instructions[20] = "1011011011111111" ;
+       Instructions[21] = "1000000000001000" ;
+       Instructions[22] = "0100000000011011" ;
+       Instructions[23] = "1110000000000000" ; // NOP inserted for jump ...
+       Instructions[24] = "1001010010000010" ;
+       Instructions[25] = "1111011100100011" ;
+       Instructions[26] = "1011011011111111" ;
+       Instructions[27] = "0001101101000010" ;
+       Instructions[28] = "0100000000001001" ;
+       Instructions[29] = "1110000000000000" ; //NOP for end, needs to change...
        }
        };
 
@@ -80,12 +84,12 @@ struct parsedInstruction{
 //Struct for memController
 struct memController{
 		int reg[8];
-		int mem[512];
+		int mem[32];
 		memController(){
 			for( int i = 0; i < 9; i++){
 				reg[i] = 0x00;
 			}
-			for(int i = 0; i < 513; i++){
+			for(int i = 0; i < 33; i++){
 				mem[i] = 0x00;
 			}
 		}
@@ -159,13 +163,14 @@ struct IDEXBuf {
 //Struct for EXMEM Buffer
 struct EXMEMBuf{
 	int aluResult;
+	int ALUZero ;
 	int R2;
 	int imm;
 	int EightBitImm;
 	int writeReg;
 	struct ControlSignalsArray ControlSignals;
     //Empty Constructor
-    EXMEMBuf() {aluResult = 0; R2 = 0; imm = 0; EightBitImm = 0; writeReg = 0;}
+    EXMEMBuf() {aluResult = 0; ALUZero = 0; R2 = 0; imm = 0; EightBitImm = 0; writeReg = 0;}
 };
 
 //Struct for MEMWB Buffer
@@ -179,4 +184,3 @@ struct MEMWBBuf{
 	MEMWBBuf() {imm = 0; EightBitImm = 0; aluResult = 0; memResult = 0; writeReg = 0;}
 };
 #endif
-
